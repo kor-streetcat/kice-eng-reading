@@ -276,7 +276,7 @@ let ui={filter:'전체',wrongOnly:false,big:false}; try{Object.assign(ui,JSON.pa
 const saveUi=()=>{try{localStorage.setItem(KEY+'-ui',JSON.stringify(ui))}catch(e){}};
 const $=s=>document.querySelector(s);
 function setHash(_a,_b,u){try{history.replaceState(null,'',u)}catch(e){}}
-const CACHE='kice-v2';
+const CACHE='kice-v3';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmt=t=>{t=Math.max(0,Math.round(t/1000));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')};
 const icon=(id,cls='ic')=>`<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-${id}"/></svg>`;
@@ -353,17 +353,19 @@ function paintClock(){const b=$('#clock');if(!b||!cur)return;const r=rec[cur.i];
 function toggleClock(){if(!cur||rec[cur.i]||peek)return;
   if(runAt){stopClock()}else{runAt=Date.now();clearInterval(tick);tick=setInterval(paintClock,1000)}paintClock()}
 const isWide=()=>innerWidth>=1000&&innerWidth>innerHeight;
-function open(i,direct){
+function open(i,direct,keep){
   const q=Q[i]; cur=q; const r=rec[i];
   if(direct&&!inList(q)){ui.filter='전체';ui.wrongOnly=false;saveUi()}
-  pick=r?r.pick:0; peek=false; stopClock(); acc=0; runAt=0;
+  if(!keep){pick=r?r.pick:0; peek=false; stopClock(); acc=0; runAt=0;}
   setHash(null,'',location.pathname+location.search+'#'+q.id);
   const L=list(),k=L.indexOf(q);
   topbar('',`<div class="qhead"><b>${q.n}번</b><span class="exn">${esc(q.ex)}</span>${tag(q.g)}</div><div class="sp"></div>
     <button class="clockbtn" id="clock"></button><span class="badge">${k+1}/${L.length}</span>
     <button class="iconbtn ${ui.big?'':''}" id="fitbtn" aria-pressed="${ui.big}" title="${ui.big?'한 화면에 맞추기':'폭에 맞춰 크게 보기'}" aria-label="${ui.big?'한 화면에 맞추기':'폭에 맞춰 크게 보기'}">${icon('fit')}</button>`);
   $('#clock').onclick=toggleClock;
-  $('#fitbtn').onclick=()=>{ui.big=!ui.big;saveUi();open(q.i)};
+  $('#fitbtn').onclick=()=>{ui.big=!ui.big;saveUi();const b=$('#fitbtn'),l=ui.big?'한 화면에 맞추기':'폭에 맞춰 크게 보기';
+    b.setAttribute('aria-pressed',ui.big);b.title=l;b.setAttribute('aria-label',l);
+    const sh=$('.sheet');if(sh)sh.scrollTop=0;scrollTo(0,0);fit()};
   const wide=isWide();
   $('#main').innerHTML=`<section class="qv ${wide?'wide':''}" id="qv">
     <div class="sheet"><div class="figure" id="fig"><img src="img/${q.id}.webp" width="${q.w}" height="${q.h}" alt="${esc(q.ex)} ${q.n}번 문제(${esc(q.t)})"></div></div>
@@ -371,7 +373,7 @@ function open(i,direct){
   $('#strip').hidden=wide;
   renderCtrl();
   fit(); removeEventListener('resize',fit); addEventListener('resize',fit);
-  paintClock(); if(r) reveal(false);
+  paintClock(); if(r||peek) reveal(false);
   const nx=L[k+1]; if(nx){const im=new Image();im.src=`img/${nx.id}.webp`}
   scrollTo(0,0);
 }
@@ -379,7 +381,7 @@ function open(i,direct){
 function fit(){
   if(!cur) return;
   const wide=isWide(), qv=$('#qv'); if(!qv) return;
-  if(wide!==qv.classList.contains('wide')){open(cur.i);return}
+  if(wide!==qv.classList.contains('wide')){open(cur.i,false,true);return}
   const strip=$('#strip'); const sh=wide?0:strip.getBoundingClientRect().height;
   document.documentElement.style.setProperty('--strip-h',sh+'px');
   const top=$('.top').getBoundingClientRect().height;
