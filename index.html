@@ -188,6 +188,7 @@ table.grid{border-collapse:separate;border-spacing:0;width:100%;min-width:690px}
 .qv.wide{grid-template-columns:minmax(0,1fr) 340px;align-items:start;padding-bottom:16px;overflow:hidden}
 .qv.wide .side{max-height:100%;overflow:auto;overscroll-behavior:contain;padding-bottom:4px}
 .qv.wide .sheet{max-height:100%}
+.qv.wide.big .sheet{height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;align-items:flex-start}
 .qv.wide .side .ctrl{flex-direction:column;align-items:stretch}
 .qv.wide .side .bubbles{justify-content:space-between}
 .qv.wide .side .navbtns{margin-left:0}
@@ -275,7 +276,7 @@ let ui={filter:'전체',wrongOnly:false,big:false}; try{Object.assign(ui,JSON.pa
 const saveUi=()=>{try{localStorage.setItem(KEY+'-ui',JSON.stringify(ui))}catch(e){}};
 const $=s=>document.querySelector(s);
 function setHash(_a,_b,u){try{history.replaceState(null,'',u)}catch(e){}}
-const CACHE='kice-v1';
+const CACHE='kice-v2';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmt=t=>{t=Math.max(0,Math.round(t/1000));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')};
 const icon=(id,cls='ic')=>`<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-${id}"/></svg>`;
@@ -398,6 +399,7 @@ function fit(){
   w=Math.min(w,900);
   fig.style.width=Math.floor(w)+'px';
   if(wide){qv.style.height=(innerHeight-top)+'px';}else qv.style.height='';
+  qv.classList.toggle('big',!!ui.big);
   /* correct for anything the estimate missed so the page itself never scrolls */
   if(!ui.big) for(let k=0;k<3;k++){
     const over=document.documentElement.scrollHeight-innerHeight;
