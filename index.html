@@ -276,7 +276,7 @@ let ui={filter:'전체',wrongOnly:false,big:false}; try{Object.assign(ui,JSON.pa
 const saveUi=()=>{try{localStorage.setItem(KEY+'-ui',JSON.stringify(ui))}catch(e){}};
 const $=s=>document.querySelector(s);
 function setHash(_a,_b,u){try{history.replaceState(null,'',u)}catch(e){}}
-const CACHE='kice-v3';
+const CACHE='kice-shell-v4', IMG_CACHE='kice-img-v1';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmt=t=>{t=Math.max(0,Math.round(t/1000));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')};
 const icon=(id,cls='ic')=>`<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-${id}"/></svg>`;
@@ -333,9 +333,9 @@ function home(){
 function offlineStatus(){
   const el=$('#offl'); if(!el) return;
   if(!('caches' in window)||!('serviceWorker' in navigator)){el.textContent='이 브라우저는 오프라인 저장을 지원하지 않습니다';return}
-  caches.open(CACHE).then(c=>c.keys()).then(ks=>{
-    const n=ks.filter(r=>/\/img\/q\d{3}\.webp$/.test(new URL(r.url).pathname)).length;
-    const shell=ks.some(r=>/\/(index\.html)?$/.test(new URL(r.url).pathname));
+  Promise.all([caches.open(CACHE).then(c=>c.keys()),caches.open(IMG_CACHE).then(c=>c.keys())]).then(([sk,ik])=>{const ks=sk.concat(ik);
+    const n=ik.filter(r=>/\/img\/q\d{3}\.webp$/.test(new URL(r.url).pathname)).length;
+    const shell=sk.some(r=>/\/(index\.html)?$/.test(new URL(r.url).pathname));
     if(n>=136&&shell){el.className='badge st-ok';el.textContent='오프라인 준비 완료'}
     else{el.className='badge';el.textContent=`오프라인 준비 중 · 문제 ${n}/136`;clearTimeout(offlineStatus.h);offlineStatus.h=setTimeout(offlineStatus,1500)}
   }).catch(()=>{el.textContent='오프라인 준비 상태를 확인할 수 없습니다'})}
