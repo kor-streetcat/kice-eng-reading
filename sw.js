@@ -2,7 +2,7 @@
 // 앱 화면(SHELL_CACHE)과 문제 이미지(IMG_CACHE)를 따로 저장한다.
 // 앱 화면을 고치면 SHELL_CACHE 번호만 올린다. 이미지는 그대로 두므로 다시 받지 않는다.
 // 문제 이미지 자체를 바꿀 때만 IMG_CACHE 번호를 올린다.
-const SHELL_CACHE = 'kice-shell-v4';
+const SHELL_CACHE = 'kice-shell-v5';
 const IMG_CACHE = 'kice-img-v1';
 const KEEP = [SHELL_CACHE, IMG_CACHE];
 const SHELL = ['./', './index.html', './manifest.json', './icon-180.png', './icon-192.png', './icon-512.png'];

@@ -268,6 +268,28 @@ const EXAMS=[...new Set(Q.map(q=>q.ex))], NUMS=[...new Set(Q.map(q=>q.n))];
 const GROUP=n=>n==21?'함축 의미':n==22?'요지':n==23?'주제':n==24?'제목':n==30?'어휘':n<=34?'빈칸':n==35?'무관한 문장':n<=37?'순서':n<=39?'문장 삽입':n==40?'요약':'장문(41–42)';
 const GCOL={'함축 의미':'blue','요지':'blue','주제':'blue','제목':'blue','어휘':'purple','빈칸':'yellow','무관한 문장':'gray','순서':'green','문장 삽입':'green','요약':'pink','장문(41–42)':'orange'};
 const GROUPS=[...new Set(Q.map(q=>GROUP(q.n)))];
+
+/* ---- 정답 분포 전용 데이터: 풀이·해설 화면(Q)에는 쓰지 않는다. 출처는 정답 분포 화면 하단 주의사항에 적었다. ---- */
+const STAT_NUMS=[21,22,23,24,29,30,31,32,33,34,35,36,37,38,39,40,41,42];
+const STAT_ORDER=['21 수능','22 수능','23 6월','23 9월','23 수능','24 6월','24 9월','24 수능','25 6월','25 9월','25 수능','26 6월','26 9월','26 수능','27 6월','27 9월'];
+const STAT_ADD={ /* 해설 없는 회차: STAT_NUMS 순서대로 18개 */
+ '21 수능':'2 1 3 2 5 5 2 3 1 2 3 2 5 4 4 3 3 4',
+ '22 수능':'2 1 5 1 4 3 1 5 1 2 4 2 5 5 4 1 2 3',
+ '23 6월':'5 1 2 1 3 4 5 4 2 2 3 5 2 4 3 1 1 3',
+ '23 9월':'1 5 1 2 2 5 2 4 4 1 4 5 3 2 5 1 3 3',
+ '23 수능':'1 1 2 5 2 5 2 2 1 5 3 2 4 5 4 1 1 4',
+ '24 6월':'3 5 4 1 3 4 2 3 1 5 3 4 3 5 2 2 3 2',
+ '24 9월':'2 1 5 1 3 4 4 2 4 5 3 4 5 5 3 2 1 5',
+ '24 수능':'4 1 2 5 2 4 2 2 5 4 3 4 4 3 4 1 2 5'};
+const STAT_29={'25 6월':2,'25 9월':5,'25 수능':2,'26 6월':3,'26 9월':2,'26 수능':2,'27 6월':2,'27 9월':3}; /* 기존 회차의 29번 */
+const GROUP_S=n=>n==29?'어법':GROUP(n);
+GCOL['어법']='purple';
+const STAT_ROWS=(()=>{const r=[];
+  Q.forEach(q=>r.push({ex:q.ex,n:q.n,a:q.a,f:q.f||''}));
+  Object.entries(STAT_29).forEach(([ex,a])=>r.push({ex,n:29,a,f:''}));
+  Object.entries(STAT_ADD).forEach(([ex,v])=>{const a=v.split(' ').map(Number);if(a.length!==STAT_NUMS.length)throw new Error(ex);a.forEach((x,i)=>r.push({ex,n:STAT_NUMS[i],a:x,f:''}))});
+  r.forEach(x=>x.g=GROUP_S(x.n));
+  return r.sort((x,y)=>STAT_ORDER.indexOf(x.ex)-STAT_ORDER.indexOf(y.ex)||x.n-y.n)})();
 Q.forEach((q,i)=>{q.i=i;q.g=GROUP(q.n);q.id='q'+String(i).padStart(3,'0')});
 const KEY='kice-eng-reading-v1';
 let rec={}; try{rec=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){rec={}}
@@ -446,6 +468,7 @@ function reveal(fresh){
 
 /* ---------------- 정답 분포 ---------------- */
 function stats(){
+  const Q=STAT_ROWS,EXAMS=STAT_ORDER.filter(e=>Q.some(q=>q.ex===e)),NUMS=STAT_NUMS,GROUPS=[...new Set(NUMS.map(GROUP_S))]; /* 이 함수 안에서만 stats용 데이터를 쓴다 */
   leave(); setHash(null,'',location.pathname+location.search+'#answers');
   topbar('stats','<div class="sp"></div>');
   const K=[1,2,3,4,5],S=k=>`var(--s${k})`,JS=['','이','가','이','가','가'];
@@ -457,12 +480,12 @@ function stats(){
     <div class="exp" style="bottom:${60+exp/max*140}px"><span>균등할 때 ${exp.toFixed(1)}</span></div></div>`;
   const cum=[],run=[0,0,0,0,0,0];
   EXAMS.forEach(ex=>{Q.filter(q=>q.ex===ex).forEach(q=>run[q.a]++);cum.push(run.slice())});
-  const W=640,H=300,L=36,R=60,T=14,B=40,ymax=Math.ceil(Math.max(...cum.at(-1))/5)*5;
+  const W=640,H=300,L=36,R=60,T=14,B=52,ymax=Math.ceil(Math.max(...cum.at(-1))/5)*5;
   const x=i=>L+i*(W-L-R)/(EXAMS.length-1),y=v=>T+(1-v/ymax)*(H-T-B);
   let svg=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="회차가 쌓일 때 번호별 누적 정답 수">`;
   for(let v=0;v<=ymax;v+=5)svg+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L-8}" y="${y(v)+4}" text-anchor="end">${v}</text>`;
-  EXAMS.forEach((ex,i)=>svg+=`<text x="${x(i)}" y="${H-B+18}" text-anchor="middle">${ex}</text>`);
-  svg+=`<line x1="${x(0)}" y1="${y(17/5)}" x2="${x(EXAMS.length-1)}" y2="${y(exp)}" stroke="var(--ink-dim)" stroke-width="1.5" stroke-dasharray="5 5"/>`;
+  EXAMS.forEach((ex,i)=>{const [yr,tm]=ex.split(' ');svg+=`<text x="${x(i)}" y="${H-B+16}" text-anchor="middle">${yr}<tspan x="${x(i)}" dy="13">${tm}</tspan></text>`});
+  svg+=`<line x1="${x(0)}" y1="${y(N/EXAMS.length/5)}" x2="${x(EXAMS.length-1)}" y2="${y(exp)}" stroke="var(--ink-dim)" stroke-width="1.5" stroke-dasharray="5 5"/>`;
   K.forEach(k=>svg+=`<polyline class="ln" stroke="${S(k)}" points="${cum.map((c,i)=>x(i)+','+y(c[k])).join(' ')}"/>`);
   K.forEach(k=>cum.forEach((c,i)=>svg+=`<circle class="dot" cx="${x(i)}" cy="${y(c[k])}" r="4" fill="${S(k)}"><title>${EXAMS[i]}까지 ${CIR[k]} ${c[k]}문항</title></circle>`));
   const ends=K.map(k=>({k,v:cum.at(-1)[k],yy:y(cum.at(-1)[k])})).sort((a,b)=>a.yy-b.yy);
@@ -470,38 +493,42 @@ function stats(){
   ends.forEach(e=>svg+=`<text class="lab" x="${W-R+10}" y="${e.yy+4}">${CIR[e.k]} ${e.v}</text>`);
   svg+='</svg>';
   const th5=K.map(k=>`<th>${CIR[k]}</th>`).join('');
-  const cumTable=`<div class="tscroll"><table class="dt"><thead><tr><th>회차까지 누적</th>${th5}<th>문항</th></tr></thead><tbody>${cum.map((c,i)=>`<tr><th>${EXAMS[i]}</th>${K.map(k=>`<td>${c[k]}</td>`).join('')}<td>${17*(i+1)}</td></tr>`).join('')}</tbody></table></div>`;
+  const cumTable=`<div class="tscroll"><table class="dt"><thead><tr><th>회차까지 누적</th>${th5}<th>문항</th></tr></thead><tbody>${cum.map((c,i)=>`<tr><th>${EXAMS[i]}</th>${K.map(k=>`<td>${c[k]}</td>`).join('')}<td>${c.reduce((u,v)=>u+v,0)}</td></tr>`).join('')}</tbody></table></div>`;
   const exRows=EXAMS.map(ex=>{const c=cnt(Q.filter(q=>q.ex===ex)),mx=Math.max(...K.map(k=>c[k]));return `<tr><th>${ex}</th>${K.map(k=>`<td style="${c[k]===mx?'font-weight:700':'color:var(--ink-dim)'}">${c[k]}</td>`).join('')}</tr>`}).join('');
   const keyRows=EXAMS.map(ex=>`<tr><th>${ex}</th>${Q.filter(q=>q.ex===ex).map(q=>{const e=even.find(z=>z.q===q);return `<td><span class="key">${CIR[q.a]}</span>${e?`<span class="alt"><span class="tag g-orange" title="짝수형 정답">짝 ${e.alt}</span></span>`:''}</td>`}).join('')}</tr>`).join('');
-  const heat=NUMS.map(n=>{const c=cnt(Q.filter(q=>q.n===n));return `<tr><th>${n}번 ${tag(GROUP(n))}</th>${K.map(k=>{const p=c[k]/8;
-    return `<td class="h" title="${n}번 정답이 ${CIR[k]}인 회차 ${c[k]}/8" style="background:color-mix(in srgb,var(--accent) ${Math.round(p*100)}%,var(--sidebar));color:${p>=.5?'var(--on-accent)':c[k]?'var(--ink)':'var(--ink-faint)'}">${c[k]||'·'}</td>`}).join('')}</tr>`}).join('');
+  const heat=NUMS.map(n=>{const c=cnt(Q.filter(q=>q.n===n)),tn=c.reduce((u,v)=>u+v,0);return `<tr><th>${n}번 ${tag(GROUP_S(n))}</th>${K.map(k=>{const p=c[k]/tn;
+    return `<td class="h" title="${n}번 정답이 ${CIR[k]}인 회차 ${c[k]}/${tn}" style="background:color-mix(in srgb,var(--accent) ${Math.round(p*100)}%,var(--sidebar));color:${p>=.5?'var(--on-accent)':c[k]?'var(--ink)':'var(--ink-faint)'}">${c[k]||'·'}</td>`}).join('')}</tr>`}).join('');
   const typeRows=GROUPS.map(g=>{const qs=Q.filter(q=>q.g===g),c=cnt(qs);return `<tr><th>${tag(g)}</th>${K.map(k=>`<td>${c[k]}</td>`).join('')}<td>${qs.length}</td></tr>`}).join('');
   let pairs=0,same=0;EXAMS.forEach(ex=>{const s=Q.filter(q=>q.ex===ex);for(let i=1;i<s.length;i++)if(s[i].n-s[i-1].n===1){pairs++;if(s[i].a===s[i-1].a)same++}});
+  const chi=K.reduce((u,k)=>u+(total[k]-exp)**2/exp,0),pv=Math.exp(-chi/2)*(1+chi/2); /* 자유도 4의 상측 확률 */
+  const dev=Math.max(...K.map(k=>Math.abs(total[k]-exp)));
+  let best={c:0};NUMS.forEach(n=>{const c=cnt(Q.filter(q=>q.n===n));K.forEach(k=>{if(c[k]>best.c)best={n,k,c:c[k]}})});
+  const per=NUMS.length,nEx=EXAMS.length;
   const top=K.reduce((a,k)=>total[k]>total[a]?k:a,1),low=K.reduce((a,k)=>total[k]<total[a]?k:a,1);
   $('#main').innerHTML=`<section class="page">
     <div><h1 class="page-title">${icon('table')}${CIR[top]}${JS[top]} ${total[top]}개로 가장 많고, ${CIR[low]}${JS[low]} ${total[low]}개로 가장 적습니다</h1>
-      <p class="lede">8회분 × 17문항(21–24번, 30–42번)의 정답 번호만 모아 센 결과입니다. 다섯 번호 모두 균등 기대값 ${exp.toFixed(1)}개에서 ±4개 안쪽이라, 번호별 차이는 우연으로 생길 수 있는 수준입니다. 수능은 홀수형 기준입니다.</p></div>
+      <p class="lede">${nEx}회분 × ${per}문항(21–24번, 29번, 30–42번)의 정답 번호만 모아 센 결과입니다. 범위는 2015 개정 교육과정 시기의 평가원 6월·9월 모의평가와 수능(21–27학년도 9월)이며, 정답을 확인하지 못한 22학년도 6월·9월, 21학년도 6월·9월은 빠져 있습니다. 균등 기대값은 ${exp.toFixed(1)}개이고 가장 크게 벗어난 번호도 ${dev.toFixed(1)}개 차이입니다.</p></div>
     <div class="two">
-      <div class="card card-pad"><h2>번호별 누적 정답 수</h2><p class="sub">136문항 전체 · 점선은 다섯 번호가 똑같이 나올 때의 값입니다.</p>${totHtml}</div>
-      <div class="card card-pad"><h2>회차별 정답 번호 수</h2><p class="sub">회차당 17문항 · 굵은 숫자가 그 회차에서 가장 많은 번호입니다.</p>
+      <div class="card card-pad"><h2>번호별 누적 정답 수</h2><p class="sub">${N}문항 전체 · 점선은 다섯 번호가 똑같이 나올 때의 값입니다.</p>${totHtml}</div>
+      <div class="card card-pad"><h2>회차별 정답 번호 수</h2><p class="sub">회차당 ${per}문항 · 굵은 숫자가 그 회차에서 가장 많은 번호입니다.</p>
         <div class="tscroll"><table class="dt"><thead><tr><th>회차</th>${th5}</tr></thead><tbody>${exRows}<tr class="sum"><th>합계</th>${K.map(k=>`<td>${total[k]}</td>`).join('')}</tr></tbody></table></div></div></div>
-    <div class="card card-pad"><h2>회차가 쌓일 때의 누적 추이</h2><p class="sub">25학년도 6월부터 차례로 더한 값 · 점선은 균등 기대값(회차당 3.4개)입니다.</p>
+    <div class="card card-pad"><h2>회차가 쌓일 때의 누적 추이</h2><p class="sub">${EXAMS[0]}부터 차례로 더한 값 · 점선은 균등 기대값(회차당 ${(per/5).toFixed(1)}개)입니다.</p>
       <div class="legend2">${K.map(k=>`<span><i style="background:${S(k)}"></i>${CIR[k]}</span>`).join('')}</div>${svg}
       <details><summary>표로 보기</summary>${cumTable}</details></div>
-    <div class="card card-pad"><h2>정답표</h2><p class="sub">PDF에 실린 정답 · 짝수형 정답이 따로 적힌 수능 문항은 '짝'으로 표시했습니다.</p>
+    <div class="card card-pad"><h2>정답표</h2><p class="sub">평가원 정답 · 짝수형 정답이 따로 적힌 수능 문항은 '짝'으로 표시했습니다.</p>
       <div class="tscroll"><table class="dt"><thead><tr><th>회차</th>${NUMS.map(n=>`<th>${n}</th>`).join('')}</tr></thead><tbody>${keyRows}</tbody></table></div></div>
     <div class="two">
-      <div class="card card-pad heat"><h2>문항 번호별 정답 분포</h2><p class="sub">같은 번호가 8회 중 몇 번 그 정답이었는지 · 진할수록 많습니다.</p>
+      <div class="card card-pad heat"><h2>문항 번호별 정답 분포</h2><p class="sub">같은 번호가 ${nEx}회 중 몇 번 그 정답이었는지 · 진할수록 많습니다.</p>
         <div class="tscroll"><table class="dt"><thead><tr><th>번호</th>${th5}</tr></thead><tbody>${heat}</tbody></table></div></div>
       <div class="card card-pad"><h2>유형별 정답 번호 수</h2><p class="sub">유형은 문항 번호로 묶었습니다.</p>
         <div class="tscroll"><table class="dt"><thead><tr><th>유형</th>${th5}<th>문항</th></tr></thead><tbody>${typeRows}</tbody></table></div></div></div>
     <div class="card card-pad"><h2 style="margin-bottom:10px">읽을 때 주의할 점</h2><ol class="notes">
-      <li>이 표는 독해 17문항만 셉니다. 18–20번, 25–29번, 43–45번과 듣기 문항은 PDF에 없어서 빠졌습니다. 회차별 개수는 시험 전체의 정답 배분과 다릅니다.</li>
-      <li>번호별 개수(${K.map(k=>total[k]).join(', ')})에 카이제곱 적합도 검정을 하면 χ²=1.13, 자유도 4, p≈0.89입니다. 다섯 번호가 같은 확률로 나온다고 봐도 이상하지 않은 결과입니다.</li>
-      <li>문항 번호별 분포는 번호마다 8개뿐이라 표본이 매우 작습니다. 35번은 8회 모두 ④였고, 30번은 ④·⑤, 42번은 ⑤가 많았습니다. 지난 8회분의 기록일 뿐이고 다음 시험을 예측하는 근거가 되지 못합니다.</li>
+      <li>이 표는 ${per}문항(21–24번, 29번, 30–42번)만 셉니다. 듣기, 18–20번, 25–28번, 43–45번은 빠졌습니다. 회차별 개수는 시험 전체의 정답 배분과 다릅니다.</li>
+      <li>번호별 개수(${K.map(k=>total[k]).join(', ')})에 카이제곱 적합도 검정을 하면 χ²=${chi.toFixed(2)}, 자유도 4, p≈${pv.toFixed(2)}입니다. ${pv>=.05?'다섯 번호가 같은 확률로 나온다고 봐도 이상하지 않은 결과입니다.':'다섯 번호가 같은 확률로 나온다고 보기에는 치우친 결과입니다.'}</li>
+      <li>문항 번호별 분포는 번호마다 ${nEx}개뿐이라 표본이 작습니다. 가장 한쪽으로 쏠린 칸은 ${best.n}번의 ${CIR[best.k]}(${nEx}회 중 ${best.c}회)입니다. 지난 기록일 뿐이고 다음 시험을 예측하는 근거가 되지 못합니다.</li>
       <li>번호가 바로 이어지는 문항 쌍 ${pairs}개 중 정답이 같은 번호로 연달아 나온 경우는 ${same}번입니다. 무작위라면 약 ${Math.round(pairs/5)}번이 기대됩니다.</li>
       <li>수능은 PDF 시험지 면에 '홀수형'이 찍혀 있어 홀수형 정답을 셌습니다. 짝수형 정답이 따로 적힌 문항은 ${even.length}개(${even.map(e=>`${e.q.ex} ${e.q.n}번`).join(', ')})입니다.</li>
-      <li>정답은 업로드한 PDF에 적힌 값이고, 평가원 공식 정답표와는 대조하지 않았습니다.</li></ol></div>
+      <li>출처: 25–27학년도의 21–24번, 30–42번은 업로드한 PDF, 나머지는 EBSi에 게시된 평가원 정답표·정답 및 해설 PDF와 25학년도 9월 정답표 이미지입니다. 21·22학년도 수능만 정답표에 '홀수형'이 적혀 있는 것을 확인했고, 그 밖의 새로 넣은 수능 값은 형별 표기를 확인하지 못했습니다.</li></ol></div>
   </section>`;
   scrollTo(0,0);
 }
